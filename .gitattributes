@@ -1,0 +1,4 @@
+# .gitattributes
+secretfile filter=git-crypt diff=git-crypt
+*.key filter=git-crypt diff=git-crypt
+.env filter=git-crypt diff=git-crypt
