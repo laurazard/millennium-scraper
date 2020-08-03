@@ -9,6 +9,7 @@ services:
       - db-data:/var/lib/postgresql/data
     restart: always
     environment:
+      POSTGRES_USER: scraper
       POSTGRES_PASSWORD: example
 
   scraper:
@@ -21,6 +22,10 @@ services:
       USER_IDENTIFIER: "${USER_IDENTIFIER}"
       SECRET_NUMBER: "${SECRET_NUMBER}"
       YNAB_TOKEN: "${YNAB_TOKEN}"
+      PGHOST: 'db'
+      PGUSER: scraper
+      PGPASSWORD: example
+      PGPORT: 5432
 
 networks:
   backend:
