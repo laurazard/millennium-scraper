@@ -6,9 +6,11 @@ const dbClient = new Client();
 const userIdentifier = process.env.USER_IDENTIFIER;
 const secretNumbers = process.env.SECRET_NUMBER.split("");
 const ynabToken = process.env.YNAB_TOKEN;
-
-
+const ynabAccountId = process.env.YNAB_ACCOUNT_ID;
 const ynabAPI = new ynab.API(ynabToken);
+
+const doImport = process.env.IMPORT;
+
 
 async function fetchRecentTransactions () {
 	const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
@@ -24,7 +26,6 @@ async function fetchRecentTransactions () {
 	await page.waitFor("input[value=\"Código de Utilizador\"]");
 	const loginUserInput = await page.$("input[value=\"Código de Utilizador\"]");
 	await loginUserInput.focus();
-	console.log(userIdentifier);
 	await page.keyboard.type(userIdentifier, { delay: 100 });
 
 	const loginButton = await page.$x("//*[contains(text(), 'Login')]");
@@ -62,37 +63,75 @@ async function fetchRecentTransactions () {
 	}));
 
 	await browser.close();
-	return result;
+	return result.filter(el => {
+		return el.length !== 0;
+	});
 }
 
 async function importFromYNAB() {
 	const allTransactionsResponse = await ynabAPI.transactions.getTransactions("last-used");
-	await allTransactionsResponse.data.transactions.forEach(async (el) => {
+	allTransactionsResponse.data.transactions.forEach(async (el) => {
 		try {
-			const text = `INSERT INTO transactions(ynab_id, clear_date, amount, description, account_id) VALUES(\'${el.id}\', '${el.date}', ${el.amount}, '${el.payee_name}', '${el.account_id}')`;
+			const text = `INSERT INTO transactions(ynab_id, clear_date, amount, description, account_id) VALUES('${el.id}', '${el.date}', ${el.amount}, '${el.payee_name}', '${el.account_id}')`;
 			console.log(text);
 			await dbClient.query(text);
 		} catch(err) {
 			console.log(err);
 		}
-		
 	});
+}
+
+async function getAllStoredTransactions() {
+	return (await dbClient.query("SELECT * FROM transactions WHERE ynab_id <> ''")).rows;
 }
 
 async function getNewTransactionsAndPushToYNAB() {
 
+	const storedTransactions = await getAllStoredTransactions();
 	const recentTransactions = await fetchRecentTransactions();
+	const newTransactions = [];
+
+	recentTransactions.filter(el => {
+		return storedTransactions.filter(element => {
+			
+			const dateArray = el[0].split("-");
+			const date = new Date(dateArray[2] + "-" + dateArray[1] + "-" + dateArray[0]);
+			if(
+				element["ynab_id"] !== "" &&
+				new Date(element["clear_date"]) !== date) {
+				return false;
+			}
+
+			return element["amount"] !== Number(el[3].replace(",", "").replace(".", "")) * 10;
+		}).length == 0;
+	}).forEach(async el => {
+		const dateArray = el[0].split("-");
+		const date = new Date(dateArray[2] + "-" + dateArray[1] + "-" + dateArray[0]);
+		const transaction = {
+			account_id: ynabAccountId,
+			date: date.toISOString(),
+			amount: Number(el[3].replace(",", "").replace(".", "")) * 10,
+			payee_name: el[2],
+		};
+		newTransactions.push(transaction);
+	});
+
+	try {
+		await ynabAPI.transactions.createTransactions("last-used", {
+			transactions: newTransactions
+		});
+	} catch(err) {
+		console.log(err);
+	}
 }
 
 (async () => {
 
 	await dbClient.connect();
 
-	// while(true) {
-	// 	continue;
-	// }
-	await importFromYNAB();
-	// await getNewTransactionsAndPushToYNAB();
-
-	// await dbClient.end();
+	if(doImport) {
+		await importFromYNAB();
+	} else {
+		await getNewTransactionsAndPushToYNAB();
+	}
 })();

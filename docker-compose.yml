@@ -25,10 +25,12 @@ services:
       USER_IDENTIFIER: "${USER_IDENTIFIER}"
       SECRET_NUMBER: "${SECRET_NUMBER}"
       YNAB_TOKEN: "${YNAB_TOKEN}"
+      YNAB_ACCOUNT_ID: "{$YNAB_ACCOUNT_ID}"
       PGHOST: db
       PGUSER: scraper
       PGPASSWORD: example
       PGPORT: 5432
+      # IMPORT: "true"
 
 networks:
   backend:
