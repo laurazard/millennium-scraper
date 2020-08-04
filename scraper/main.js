@@ -1,3 +1,6 @@
+"use strict";
+
+// TODO: Change this to run without needing a database. Compare new transfers with call from Ynab
 const puppeteer = require("puppeteer");
 const ynab = require("ynab");
 const { Client } = require("pg");
@@ -107,11 +110,13 @@ async function getNewTransactionsAndPushToYNAB() {
 	}).forEach(async el => {
 		const dateArray = el[0].split("-");
 		const date = new Date(dateArray[2] + "-" + dateArray[1] + "-" + dateArray[0]);
+		const amount = Number(el[3].replace(",", "").replace(".", "")) * 10;
 		const transaction = {
 			account_id: ynabAccountId,
-			date: date.toISOString(),
-			amount: Number(el[3].replace(",", "").replace(".", "")) * 10,
+			date: date.toISOString().substring(0,10),
+			amount: amount,
 			payee_name: el[2],
+			import_id: "ms:" + amount + ":" + date.toISOString().substring(0,10)
 		};
 		newTransactions.push(transaction);
 	});
@@ -121,6 +126,7 @@ async function getNewTransactionsAndPushToYNAB() {
 			transactions: newTransactions
 		});
 	} catch(err) {
+		console.log(newTransactions);
 		console.log(err);
 	}
 }
