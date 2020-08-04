@@ -1,10 +1,12 @@
 const puppeteer = require("puppeteer");
-
+const ynab = require("ynab");
+const { Client } = require("pg");
+const dbClient = new Client();
 
 const userIdentifier = process.env.USER_IDENTIFIER;
 const secretNumbers = process.env.SECRET_NUMBER.split("");
 const ynabToken = process.env.YNAB_TOKEN;
-const ynab = require("ynab");
+
 
 const ynabAPI = new ynab.API(ynabToken);
 
@@ -22,6 +24,7 @@ async function fetchRecentTransactions () {
 	await page.waitFor("input[value=\"Código de Utilizador\"]");
 	const loginUserInput = await page.$("input[value=\"Código de Utilizador\"]");
 	await loginUserInput.focus();
+	console.log(userIdentifier);
 	await page.keyboard.type(userIdentifier, { delay: 100 });
 
 	const loginButton = await page.$x("//*[contains(text(), 'Login')]");
@@ -62,11 +65,28 @@ async function fetchRecentTransactions () {
 	return result;
 }
 
-(async () => {
+async function importFromYNAB() {
+	const allTransactionsResponse = await ynabAPI.transactions.getTransactions("last-used");
+	allTransactionsResponse.data.transactions.forEach(async (el) => {
+		console.log(el);
+		const text = `INSERT INTO transactions(ynab_id, clear_date, amount, description, account_id) VALUES('${el.id}', '${el.date}', ${el.amount}, '${el.payee_name}', '${el.account_id}')`;
+
+		const res = await dbClient.query(text);
+		console.log(res.rows[0]);
+	});
+}
+
+async function getNewTransactionsAndPushToYNAB() {
 
 	const recentTransactions = await fetchRecentTransactions();
-	console.log(recentTransactions);
-	const budgetsResponse = await ynabAPI.budgets.getBudgets();
-	const { budgets } = budgetsResponse.data;
-	console.log(budgets);
+}
+
+(async () => {
+
+	await dbClient.connect();
+
+	// await importFromYNAB();
+	await getNewTransactionsAndPushToYNAB();
+
+	await dbClient.end();
 })();

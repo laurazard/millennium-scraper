@@ -3,6 +3,8 @@ services:
 
   db:
     image: postgres
+    ports:
+      - "5432:5432"
     networks:
       - backend
     volumes:
@@ -18,7 +20,9 @@ services:
     networks:
       - backend
     environment:
-      POSTGRES_PASSWORD: example
+      PGUSER: scraper
+      PGHOST: db
+      PGPASSWORD: example
       USER_IDENTIFIER: "${USER_IDENTIFIER}"
       SECRET_NUMBER: "${SECRET_NUMBER}"
       YNAB_TOKEN: "${YNAB_TOKEN}"
