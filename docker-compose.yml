@@ -19,14 +19,13 @@ services:
       context: ./scraper
     networks:
       - backend
+    depends_on:
+      - db
     environment:
-      PGUSER: scraper
-      PGHOST: db
-      PGPASSWORD: example
       USER_IDENTIFIER: "${USER_IDENTIFIER}"
       SECRET_NUMBER: "${SECRET_NUMBER}"
       YNAB_TOKEN: "${YNAB_TOKEN}"
-      PGHOST: 'db'
+      PGHOST: db
       PGUSER: scraper
       PGPASSWORD: example
       PGPORT: 5432

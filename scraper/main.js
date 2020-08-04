@@ -67,12 +67,15 @@ async function fetchRecentTransactions () {
 
 async function importFromYNAB() {
 	const allTransactionsResponse = await ynabAPI.transactions.getTransactions("last-used");
-	allTransactionsResponse.data.transactions.forEach(async (el) => {
-		console.log(el);
-		const text = `INSERT INTO transactions(ynab_id, clear_date, amount, description, account_id) VALUES('${el.id}', '${el.date}', ${el.amount}, '${el.payee_name}', '${el.account_id}')`;
-
-		const res = await dbClient.query(text);
-		console.log(res.rows[0]);
+	await allTransactionsResponse.data.transactions.forEach(async (el) => {
+		try {
+			const text = `INSERT INTO transactions(ynab_id, clear_date, amount, description, account_id) VALUES(\'${el.id}\', '${el.date}', ${el.amount}, '${el.payee_name}', '${el.account_id}')`;
+			console.log(text);
+			await dbClient.query(text);
+		} catch(err) {
+			console.log(err);
+		}
+		
 	});
 }
 
@@ -85,8 +88,11 @@ async function getNewTransactionsAndPushToYNAB() {
 
 	await dbClient.connect();
 
-	// await importFromYNAB();
-	await getNewTransactionsAndPushToYNAB();
+	// while(true) {
+	// 	continue;
+	// }
+	await importFromYNAB();
+	// await getNewTransactionsAndPushToYNAB();
 
-	await dbClient.end();
+	// await dbClient.end();
 })();
