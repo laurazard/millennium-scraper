@@ -71,6 +71,13 @@ async function fetchAllYNABTransactions() {
 	return allTransactionsResponse.data.transactions;
 }
 
+function compareDates(date, otherDate) {
+	const dateString = date.toISOString().substring(0, date.toISOString().length - 14);
+	const otherDateString = otherDate.toISOString().substring(0, otherDate.toISOString().length - 14);
+
+	return dateString === otherDateString;
+}
+
 async function getNewTransactionsAndPushToYNAB() {
 
 	const existingTransactions = await fetchAllYNABTransactions();
@@ -82,9 +89,21 @@ async function getNewTransactionsAndPushToYNAB() {
 			
 			const dateArray = el[0].split("-");
 			const date = new Date(dateArray[2] + "-" + dateArray[1] + "-" + dateArray[0]);
+
+			console.log("--------");
+			console.log(el);
+			console.log(element);
+			console.log(date);
+			console.log(new Date(element["date"]));
+			console.log(Number(el[3].replace(",", "").replace(".", "")) * 10);
+			console.log(element["amount"]);
+
+			console.log("--------");
 			
-			return new Date(element["date"]) !== date && 
-					element["amount"] !== Number(el[3].replace(",", "").replace(".", "")) * 10;
+			console.log(compareDates(date, new Date(element["date"])));
+
+			return compareDates(date, new Date(element["date"])) && 
+					element["amount"] == Number(el[3].replace(",", "").replace(".", "")) * 10;
 		}).length == 0;
 	}).forEach(async el => {
 		const dateArray = el[0].split("-");
