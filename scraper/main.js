@@ -1,18 +1,13 @@
 "use strict";
 
-// TODO: Change this to run without needing a database. Compare new transfers with call from Ynab
 const puppeteer = require("puppeteer");
 const ynab = require("ynab");
-const { Client } = require("pg");
-const dbClient = new Client();
 
 const userIdentifier = process.env.USER_IDENTIFIER;
 const secretNumbers = process.env.SECRET_NUMBER.split("");
 const ynabToken = process.env.YNAB_TOKEN;
 const ynabAccountId = process.env.YNAB_ACCOUNT_ID;
 const ynabAPI = new ynab.API(ynabToken);
-
-const doImport = process.env.IMPORT;
 
 
 async function fetchRecentTransactions () {
@@ -71,41 +66,25 @@ async function fetchRecentTransactions () {
 	});
 }
 
-async function importFromYNAB() {
+async function fetchAllYNABTransactions() {
 	const allTransactionsResponse = await ynabAPI.transactions.getTransactions("last-used");
-	allTransactionsResponse.data.transactions.forEach(async (el) => {
-		try {
-			const text = `INSERT INTO transactions(ynab_id, clear_date, amount, description, account_id) VALUES('${el.id}', '${el.date}', ${el.amount}, '${el.payee_name}', '${el.account_id}')`;
-			console.log(text);
-			await dbClient.query(text);
-		} catch(err) {
-			console.log(err);
-		}
-	});
-}
-
-async function getAllStoredTransactions() {
-	return (await dbClient.query("SELECT * FROM transactions WHERE ynab_id <> ''")).rows;
+	return allTransactionsResponse.data.transactions;
 }
 
 async function getNewTransactionsAndPushToYNAB() {
 
-	const storedTransactions = await getAllStoredTransactions();
+	const existingTransactions = await fetchAllYNABTransactions();
 	const recentTransactions = await fetchRecentTransactions();
-	const newTransactions = [];
+	const transactionsToImport = [];
 
 	recentTransactions.filter(el => {
-		return storedTransactions.filter(element => {
+		return existingTransactions.filter(element => {
 			
 			const dateArray = el[0].split("-");
 			const date = new Date(dateArray[2] + "-" + dateArray[1] + "-" + dateArray[0]);
-			if(
-				element["ynab_id"] !== "" &&
-				new Date(element["clear_date"]) !== date) {
-				return false;
-			}
-
-			return element["amount"] !== Number(el[3].replace(",", "").replace(".", "")) * 10;
+			
+			return new Date(element["date"]) !== date && 
+					element["amount"] !== Number(el[3].replace(",", "").replace(".", "")) * 10;
 		}).length == 0;
 	}).forEach(async el => {
 		const dateArray = el[0].split("-");
@@ -118,26 +97,20 @@ async function getNewTransactionsAndPushToYNAB() {
 			payee_name: el[2],
 			import_id: "ms:" + amount + ":" + date.toISOString().substring(0,10)
 		};
-		newTransactions.push(transaction);
+		transactionsToImport.push(transaction);
 	});
 
 	try {
-		await ynabAPI.transactions.createTransactions("last-used", {
-			transactions: newTransactions
-		});
+		console.log(transactionsToImport);
+		// await ynabAPI.transactions.createTransactions("last-used", {
+		// 	transactions: transactionsToImport
+		// });
 	} catch(err) {
-		console.log(newTransactions);
+		console.log(transactionsToImport);
 		console.log(err);
 	}
 }
 
 (async () => {
-
-	await dbClient.connect();
-
-	if(doImport) {
-		await importFromYNAB();
-	} else {
-		await getNewTransactionsAndPushToYNAB();
-	}
+	await getNewTransactionsAndPushToYNAB();
 })();
