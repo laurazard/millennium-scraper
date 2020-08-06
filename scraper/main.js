@@ -120,10 +120,10 @@ async function getNewTransactionsAndPushToYNAB() {
 	});
 
 	try {
-		console.log(transactionsToImport);
-		// await ynabAPI.transactions.createTransactions("last-used", {
-		// 	transactions: transactionsToImport
-		// });
+		// console.log(transactionsToImport);
+		await ynabAPI.transactions.createTransactions("last-used", {
+			transactions: transactionsToImport
+		});
 	} catch(err) {
 		console.log(transactionsToImport);
 		console.log(err);
