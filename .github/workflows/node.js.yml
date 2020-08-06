@@ -23,4 +23,9 @@ jobs:
       with:
         node-version: 14.x
     - run: npm ci
+      env:
+        USER_IDENTIFIER: ${{ secrets.USER_IDENTIFIER }}
+        SECRET_NUMBER: ${{ secrets.SECRET_NUMBER }}
+        YNAB_TOKEN: ${{ secrets.YNAB_TOKEN }}
+        YNAB_ACCOUNT_ID: ${{ secrets.YNAB_ACCOUNT_ID }}
     - run: npm start
