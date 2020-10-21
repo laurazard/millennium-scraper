@@ -11,7 +11,7 @@
   "dependencies": {
     "pg": "^8.3.0",
     "puppeteer": "^5.2.1",
-    "ynab": "^1.19.0"
+    "ynab": "^1.20.0"
   },
   "devDependencies": {
     "eslint": "^7.6.0",
